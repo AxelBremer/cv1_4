@@ -1,31 +1,87 @@
-function [] = RANSAC(matches_T)
+function transform = RANSAC(image1, image2)
+    matches = keypoint_matching(image1, image2, 0);
 
-%repeat N times
-N = 10;
-if N > size(matches_T, 1)
-    N = size(matches_T,1);
-for runs=1:N
-   %P random matches 
-    P = 5;
-    matches_P = datasample(matches_T,P,1);%last value is dim
-    av_P = [mean(matches_P,1) mean(matches_P,2)];%ofzoiets
-    A = [av_P(1) av_P(2) 0 0 1 0; 0 0 av_P(1) av_P(2) 0 1];
-    x = zeros(6,1);%of 1x6??
-    b = 
+    gold_t = matches(3:4,:);
+    P = 3;
+    N = 100;
+    if N > size(matches, 1)
+        N = size(matches,1);
+    end
+    
+    best_tform = [0 0 0 0 0 0]';
+    best_score = 0;
+
+    for run=1:N
+        score = 0;
+        perm = randperm(size(matches,2));
+        sel = perm(1:P);
+        m_sel = matches(:,sel);
+        transform = m_sel(3:4,:);
+        b = reshape(transform,[6,1]);
+        A = get_A(m_sel(1:2,:));
+        
+        tform = pinv(A)*b;
+        
+        m = [tform(1) tform(2); tform(3) tform(4)];
+        t = [tform(5), tform(6)]';
+        
+        for i = 1:size(gold_t,2)
+            xy = [matches(1,i) matches(2,i)]';
+            uv = (m * xy) + t;
+            d = norm(gold_t(:,i) - uv);
+            if d < 10
+                score = score + 1;
+            end
+        end
+        
+        if score > best_score
+            best_score = score;
+            best_tform = tform;
+        end
+    end
+    
+    plot_transform(image1, image2, matches, best_tform);
+    transform = best_tform;
+
 end
 
-%from P matches make A and b:   (average the matches??? can only process one match at a time)
-%A = [x y 0 0 1 0]              (or just P=1?)
-%    [0 0 x y 0 1]
-%x = [m1 m2 m3 m4 t1 t2]^T
-%b = [x'y']^T
-%solve: x = pinv(A*b)
+function A = get_A(points)
+    A = [];
+    for i = 1:size(points,2)
+        x = points(1,i);
+        y = points(2,i);
+        A(end+1:end+2,:) = [x y 0 0 1 0 ; 0 0 x y 0 1];
+    end
+end
 
-%return transformation
+function plot_transform(image1, image2, matches, tform)
+    set_size = 20;
+    im_width = size(image1,2);
+    big_im = cat(2,image1,image2);
+    imshow(big_im);
+    hold on;
+    
+    m = [tform(1) tform(2); tform(3) tform(4)];
+    t = [tform(5), tform(6)]';
+    uv = [];
 
-%transform T points from im1
-%plot with line connecting T points in im1 and im2
-
-%count inliers (#transformed points im1 in 10 pixel radius of pair im2)
-
+    for i = 1:size(matches,2)
+        xy = [matches(1,i) matches(2,i)]';
+        uv(:,end+1) = (m * xy) + t;
+    end
+    u = uv(1,:);
+    v = uv(2,:);
+    u_moved = u + im_width;
+    
+    perm = randperm(size(matches,2));
+    sel = perm(1:set_size);
+    m_sel = matches(:,sel);
+    u_sel = u_moved(sel);
+    v_sel = v(sel);
+    
+    plot(m_sel(1,:), m_sel(2,:), 'o', 'color' ,'b');
+    plot(u_sel,v_sel,'o', 'color','r');
+    for i = 1:set_size
+        plot([m_sel(1,i) u_sel(i)], [m_sel(2,i) v_sel(i)]);
+    end
 end

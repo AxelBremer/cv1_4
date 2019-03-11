@@ -1,5 +1,5 @@
 function keypoint_matches = keypoint_matching(im1, im2, print)
-    set_size = 10
+    set_size = 10;
     [f1,d1] = vl_sift(im1);
     [f2,d2] = vl_sift(im2);
     [matches, scores] = vl_ubcmatch(d1, d2);
