@@ -45,14 +45,18 @@ function transform = RANSAC(image1, image2)
     figure(1);
     plot_transform(image1, image2, matches, best_tform);
     
+    affine_m = [transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1];
     h = figure(2);
-    tform = affine2d([transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1]);
+    tform = affine2d(affine_m);
     subplot(131)
     imshow(image2);
     title('original transformed image');
     subplot(132)
     imshow(imwarp(image1, tform));
     title('imwarp transformed image');
+    subplot(133)
+    imshow(rotateim(image1, tform));
+    title('NN interpolation');
     waitfor(h)
 end
 
@@ -94,5 +98,45 @@ function plot_transform(image1, image2, matches, tform)
     plot(u_sel,v_sel,'o', 'color','r');
     for i = 1:set_size
         plot([m_sel(1,i) u_sel(i)], [m_sel(2,i) v_sel(i)]);
+    end
+end
+
+function im = rotateim(image, tform)
+    [x_len, y_len] = size(image);
+    
+    % Calculate the size of the new image
+    [c1_x, c1_y] = transformPointsForward(tform, 1, 1);
+    [opp_c1_x, opp_c1_y] = transformPointsForward(tform, x_len, y_len);
+    dist1 = sqrt( ( c1_x - opp_c1_x )^2 + ( c1_y - opp_c1_y )^2 );
+    
+    [c2_x, c2_y] = transformPointsForward(tform, 1, y_len);
+    [opp_c2_x, opp_c2_y] = transformPointsForward(tform, x_len, 1);
+    dist2 = sqrt( ( c2_x - opp_c2_x )^2 + ( c2_y - opp_c2_y )^2 );
+    
+    if dist1 > dist2
+        im = zeros(ceil(dist1), ceil(dist1));
+        imsize = dist1;
+    else
+        im = zeros(ceil(dist2), ceil(dist2));
+        imsize = dist2;
+    end
+    
+    % Fill the new image in pixel by pixel
+    for i = 1:imsize
+        for j = 1:imsize
+            [old_x, old_y] = transformPointsInverse(tform, i, j);
+            if old_x > 0.5 && old_y > 0.5 && old_x < x_len && old_y < y_len
+                % Nearest neighbor
+                nn_x = floor(old_x + 0.5);
+                nn_y = floor(old_y + 0.5);
+                pixel_val = image(nn_x, nn_y);
+                im(i, j) = pixel_val;
+            end
+
+%             [new_x, new_y] = transformPointsForward(tform, i, j);
+%             new_x = floor(new_x + 0.5)
+%             new_y = floor(new_y + 0.5)
+%             im(new_x, new_y) = image(i, j);
+        end
     end
 end
