@@ -3,7 +3,7 @@ function transform = RANSAC(image1, image2)
 
     gold_t = matches(3:4,:);
     P = 3;
-    N = 100;
+    N = 7;
     if N > size(matches, 1)
         N = size(matches,1);
     end
@@ -17,7 +17,7 @@ function transform = RANSAC(image1, image2)
         sel = perm(1:P);
         m_sel = matches(:,sel);
         transform = m_sel(3:4,:);
-        b = reshape(transform,[6,1]);
+        b = reshape(transform,[P*2,1]);
         A = get_A(m_sel(1:2,:));
         
         tform = pinv(A)*b;
@@ -40,9 +40,20 @@ function transform = RANSAC(image1, image2)
         end
     end
     
-    plot_transform(image1, image2, matches, best_tform);
     transform = best_tform;
-
+    
+    figure(1);
+    plot_transform(image1, image2, matches, best_tform);
+    
+    h = figure(2);
+    tform = affine2d([transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1]);
+    subplot(131)
+    imshow(image2);
+    title('original transformed image');
+    subplot(132)
+    imshow(imwarp(image1, tform));
+    title('imwarp transformed image');
+    waitfor(h)
 end
 
 function A = get_A(points)
