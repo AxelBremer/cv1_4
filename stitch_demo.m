@@ -1,5 +1,5 @@
-left = imread('left.jpg');
-right = imread('right.jpg');
+left = im2single(rgb2gray(imread('left.jpg')));
+right = im2single(rgb2gray(imread('right.jpg')));
 
 stitched_img = stitch(left, right);
 

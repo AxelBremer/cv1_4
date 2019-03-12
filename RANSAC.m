@@ -1,4 +1,4 @@
-function transform = RANSAC(image1, image2)
+function transform = RANSAC(image1, image2, print)
     matches = keypoint_matching(image1, image2, 0);
 
     gold_t = matches(3:4,:);
@@ -42,18 +42,20 @@ function transform = RANSAC(image1, image2)
     
     transform = best_tform;
     
-    figure(1);
-    plot_transform(image1, image2, matches, best_tform);
+    if print == 1
+        figure(1);
+        plot_transform(image1, image2, matches, best_tform);
     
-    h = figure(2);
-    tform = affine2d([transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1]);
-    subplot(131)
-    imshow(image2);
-    title('original transformed image');
-    subplot(132)
-    imshow(imwarp(image1, tform));
-    title('imwarp transformed image');
-    waitfor(h)
+        h = figure(2);
+        tform = affine2d([transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1]);
+        subplot(131)
+        imshow(image2);
+        title('original transformed image');
+        subplot(132)
+        imshow(imwarp(image1, tform));
+        title('imwarp transformed image');
+        waitfor(h)
+    end
 end
 
 function A = get_A(points)
