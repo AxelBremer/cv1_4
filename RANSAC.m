@@ -1,4 +1,4 @@
-function transform = RANSAC(image1, image2)
+function transform = RANSAC(image1, image2, print)
     matches = keypoint_matching(image1, image2, 0);
 
     gold_t = matches(3:4,:);
@@ -42,22 +42,22 @@ function transform = RANSAC(image1, image2)
     
     transform = best_tform;
     
-    figure(1);
-    plot_transform(image1, image2, matches, best_tform);
-    
-    affine_m = [transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1];
-    h = figure(2);
-    tform = affine2d(affine_m);
-    subplot(131)
-    imshow(image2);
-    title('original transformed image');
-    subplot(132)
-    imshow(imwarp(image1, tform));
-    title('imwarp transformed image');
-    subplot(133)
-    imshow(rotateim(image1, tform));
-    title('NN interpolation');
-    waitfor(h)
+    if print == 1
+        figure(1);
+        plot_transform(image1, image2, matches, best_tform);
+        h = figure(2);
+        tform = affine2d([transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1]);
+        subplot(131)
+        imshow(image2);
+        title('original transformed image');
+        subplot(132)
+        imshow(imwarp(image1, tform));
+        title('imwarp transformed image');
+        subplot(133)
+        imshow(rotateim(image1, tform));
+        title('NN interpolation');
+        waitfor(h)
+    end
 end
 
 function A = get_A(points)
@@ -122,21 +122,21 @@ function im = rotateim(image, tform)
     end
     
     % Fill the new image in pixel by pixel
-    for i = 1:imsize
-        for j = 1:imsize
-            [old_x, old_y] = transformPointsInverse(tform, i, j);
-            if old_x > 0.5 && old_y > 0.5 && old_x < x_len && old_y < y_len
-                % Nearest neighbor
-                nn_x = floor(old_x + 0.5);
-                nn_y = floor(old_y + 0.5);
-                pixel_val = image(nn_x, nn_y);
-                im(i, j) = pixel_val;
-            end
-
-%             [new_x, new_y] = transformPointsForward(tform, i, j);
-%             new_x = floor(new_x + 0.5)
-%             new_y = floor(new_y + 0.5)
-%             im(new_x, new_y) = image(i, j);
-        end
-    end
+%     for i = 1:imsize
+%         for j = 1:imsize
+%             [old_x, old_y] = transformPointsInverse(tform, i, j);
+%             if old_x > 0.5 && old_y > 0.5 && old_x < x_len && old_y < y_len
+%                 % Nearest neighbor
+%                 nn_x = floor(old_x + 0.5);
+%                 nn_y = floor(old_y + 0.5);
+%                 pixel_val = image(nn_x, nn_y);
+%                 im(i, j) = pixel_val;
+%             end
+% 
+% %             [new_x, new_y] = transformPointsForward(tform, i, j);
+% %             new_x = floor(new_x + 0.5)
+% %             new_y = floor(new_y + 0.5)
+% %             im(new_x, new_y) = image(i, j);
+%         end
+%     end
 end
