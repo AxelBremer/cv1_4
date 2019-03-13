@@ -3,7 +3,7 @@ function transform = RANSAC(image1, image2, print)
 
     gold_t = matches(3:4,:);
     P = 3;
-    N = 7;
+    N = 19;
     if N > size(matches, 1)
         N = size(matches,1);
     end
