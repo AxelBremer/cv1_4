@@ -102,39 +102,46 @@ function plot_transform(image1, image2, matches, tform)
 end
 
 function im = rotateim(image, transform)
+    
     [x_len, y_len] = size(image);
-    
-    affine = [transform(1) transform(3) 0;...
-              transform(2) transform(4) 0;...
-              transform(5) transform(6) 1];
-    affine = inv(affine);
-    
-%     a = affine * [1 - x_len/2; 1 - y_len/2; 1]
-%     b = affine * [x_len - x_len/2; y_len - y_len/2; 1]
-%     
-%     c = affine * [1 - x_len/2; y_len - y_len/2; 1]
-%     d  = affine * [x_len - x_len/2; 1 - y_len/2; 1]
-
-%     if a(1) < 1
-%         height = ceil(abs(a(1) + x_len/2) + b(1) + x_len/2);
-%         width = ceil(abs(d(2) + y_len/2) + c(2) + y_len/2);
-%     else
-%         height = ceil(abs(c(1) + x_len/2) + d(1) + x_len/2);
-%         width = ceil(abs(a(2) + y_len/2) + b(2) + y_len/2);
-%     end
-
-    padding = 300;
-    half_pad = padding/2;
-    im = zeros(x_len + padding, y_len + padding);
-    
     x_half = (x_len / 2);
     y_half = (y_len / 2);
     
-    for x = 1 : x_len + padding
-        for y = 1 : y_len + padding
+    orig_affine = [transform(1) transform(3) 0;...
+                   transform(2) transform(4) 0;...
+                   transform(5) transform(6) 1];
+
+    affine = inv(orig_affine);
+    
+    % calculate the padding that is necessary for the transformation
+    
+    a = orig_affine * [1 - x_half; 1 - y_half; 1];
+    b = orig_affine * [x_len - x_half; y_len - y_half; 1];
+    c = orig_affine * [1 - x_half; y_len - y_half; 1];
+    d  = orig_affine * [x_len - x_half; 1 - y_half; 1];
+
+    a_x = a(1) + x_half;
+    
+    if a_x < 1
+        new_height = ceil( abs(a(1)) + abs(b(1)));
+        new_width = ceil(abs(d(2)) + abs(c(2)));
+    else
+        new_height = ceil( abs(c(1)) + abs(d(1)));
+        new_width = ceil( abs(a(2)) + abs(b(2)));
+    end
+
+    x_padding = new_height - x_len;
+    y_padding = new_width - y_len;
+    x_half_pad = x_padding / 2;
+    y_half_pad = y_padding / 2;
+    
+    im = zeros(x_len + x_padding, y_len + y_padding);
+    
+    for x = 1 : x_len + x_padding
+        for y = 1 : y_len + y_padding
             % make sure the image applies the transformation on the middle
             % of the image
-            old_points = affine * [x - x_half - half_pad; y - y_half - half_pad; 1];
+            old_points = affine * [x - x_half - x_half_pad; y - y_half - y_half_pad; 1];
             old_x = old_points(1) + x_half;
             old_y = old_points(2) + y_half;
             if old_x >= 1 && old_y >= 1 && old_x <= x_len && old_y <= y_len
