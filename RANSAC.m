@@ -52,9 +52,10 @@ function transform = RANSAC(image1, image2, print)
         title('original transformed image');
         subplot(132)
         imshow(imwarp(image1, tform));
+%         imshow(imwarp(image1, tform, 'nearest'));
         title('imwarp transformed image');
         subplot(133)
-        imshow(rotateim(image1, tform));
+        imshow(rotateim(image1, transform));
         title('NN interpolation');
         waitfor(h)
     end
@@ -101,42 +102,56 @@ function plot_transform(image1, image2, matches, tform)
     end
 end
 
-function im = rotateim(image, tform)
+function im = rotateim(image, transform)
+    
     [x_len, y_len] = size(image);
+    x_half = (x_len / 2);
+    y_half = (y_len / 2);
     
-    % Calculate the size of the new image
-    [c1_x, c1_y] = transformPointsForward(tform, 1, 1);
-    [opp_c1_x, opp_c1_y] = transformPointsForward(tform, x_len, y_len);
-    dist1 = sqrt( ( c1_x - opp_c1_x )^2 + ( c1_y - opp_c1_y )^2 );
+    orig_affine = [transform(1) transform(3) 0;...
+                   transform(2) transform(4) 0;...
+                   transform(5) transform(6) 1];
+
+    affine = inv(orig_affine);
     
-    [c2_x, c2_y] = transformPointsForward(tform, 1, y_len);
-    [opp_c2_x, opp_c2_y] = transformPointsForward(tform, x_len, 1);
-    dist2 = sqrt( ( c2_x - opp_c2_x )^2 + ( c2_y - opp_c2_y )^2 );
+    % calculate the padding that is necessary for the transformation
     
-    if dist1 > dist2
-        im = zeros(ceil(dist1), ceil(dist1));
-        imsize = dist1;
+    a = orig_affine * [1 - x_half; 1 - y_half; 1];
+    b = orig_affine * [x_len - x_half; y_len - y_half; 1];
+    c = orig_affine * [1 - x_half; y_len - y_half; 1];
+    d  = orig_affine * [x_len - x_half; 1 - y_half; 1];
+
+    a_x = a(1) + x_half;
+    
+    if a_x < 1
+        new_height = ceil( abs(a(1)) + abs(b(1)));
+        new_width = ceil(abs(d(2)) + abs(c(2)));
     else
-        im = zeros(ceil(dist2), ceil(dist2));
-        imsize = dist2;
+        new_height = ceil( abs(c(1)) + abs(d(1)));
+        new_width = ceil( abs(a(2)) + abs(b(2)));
     end
+
+    x_padding = new_height - x_len;
+    y_padding = new_width - y_len;
+    x_half_pad = x_padding / 2;
+    y_half_pad = y_padding / 2;
     
-    % Fill the new image in pixel by pixel
-%     for i = 1:imsize
-%         for j = 1:imsize
-%             [old_x, old_y] = transformPointsInverse(tform, i, j);
-%             if old_x > 0.5 && old_y > 0.5 && old_x < x_len && old_y < y_len
-%                 % Nearest neighbor
-%                 nn_x = floor(old_x + 0.5);
-%                 nn_y = floor(old_y + 0.5);
-%                 pixel_val = image(nn_x, nn_y);
-%                 im(i, j) = pixel_val;
-%             end
-% 
-% %             [new_x, new_y] = transformPointsForward(tform, i, j);
-% %             new_x = floor(new_x + 0.5)
-% %             new_y = floor(new_y + 0.5)
-% %             im(new_x, new_y) = image(i, j);
-%         end
-%     end
+    im = zeros(x_len + x_padding, y_len + y_padding);
+    
+    for x = 1 : x_len + x_padding
+        for y = 1 : y_len + y_padding
+            % make sure the image applies the transformation on the middle
+            % of the image
+            old_points = affine * [x - x_half - x_half_pad; y - y_half - y_half_pad; 1];
+            old_x = old_points(1) + x_half;
+            old_y = old_points(2) + y_half;
+            if old_x >= 1 && old_y >= 1 && old_x <= x_len && old_y <= y_len
+                % nearest neighbor
+                nn_x = floor(old_x + 0.5);
+                nn_y = floor(old_y + 0.5);
+                pixel_val = image(nn_x, nn_y);
+                im(x, y) = pixel_val;
+            end
+        end
+    end
 end
