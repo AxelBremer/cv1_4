@@ -52,6 +52,7 @@ function transform = RANSAC(image1, image2, print)
         title('original transformed image');
         subplot(132)
         imshow(imwarp(image1, tform));
+%         imshow(imwarp(image1, tform, 'nearest'));
         title('imwarp transformed image');
         subplot(133)
         imshow(rotateim(image1, transform));
