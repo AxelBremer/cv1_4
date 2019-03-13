@@ -1,24 +1,23 @@
 function stitched_img = stitch(left, right)
 transform = RANSAC(right, left, 0);
 tform = affine2d([transform(1) transform(3) 0; transform(2) transform(4) 0; transform(5) transform(6) 1]);
+warped_img = imwarp(right, tform, 'nearest', 'OutputView', imref([1000,1000]));
 
-[d1, d2, v_offset, h_offset] = get_stitch_size(transform, left, right);
+keyboard
 
-warped_img = imwarp(right, tform, 'nearest', 'OutputView', imref2d([500,500]));
-%keyboard;
-%translated_img = imtranslate(warped_img, [transform(5)+h_offset, transform(6)+v_offset], 'nearest', 'OutputView','full');
+[d1, d2, v_offset, h_offset] = get_stitch_size(transform, left, right)
+translated_img = imtranslate(warped_img, [transform(5)+h_offset, transform(6)+v_offset], 'nearest', 'OutputView','full');
 %left = imtranslate(left, [h_offset, v_offset], 'nearest', 'OutputView','full');
 
 %stitched_img = zeros([d1, d2]);
-stitched_img = zeros(size(warped_img));
+stitched_img = zeros(size(translated_img));
 stitched_img(1:size(left, 1), 1:size(left, 2)) = left;
-stitched_img = max(stitched_img, warped_img);
+stitched_img = max(stitched_img, translated_img);
 end
 
 function [d1, d2, v_offset, h_offset] = get_stitch_size(transform, left, right)
     m = [transform(1) transform(2); transform(3) transform(4)];
     t = [transform(5), transform(6)]';
-    keyboard
     corners = zeros(2,4);
     corners(:,1) = (m * [1,1]') + t;
     corners(:,2) = (m * [1,size(right,2)]') + t;
